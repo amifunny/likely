@@ -1,0 +1,23 @@
+<!--
+	Using jinja to render card of item on display
+	on home page.
+ -->
+
+{% for item in items_list %}
+
+	<div class="card">
+		
+		<div class="card-poster">
+			<img class="card-poster-img" src={{item[4]}} >
+		</div>
+
+		<div class="card-title flex-center">
+			<div>
+				<div>{{item[1]}}</div>
+				<div>{{item[2]}} IMDB</div>
+			</div>	
+		</div>
+
+	</div>
+
+{% endfor %}

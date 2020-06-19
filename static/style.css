@@ -1,0 +1,107 @@
+:root{
+	--body-bg:#d5d4ff;
+	--button-bg:beige;
+	--header-bg:white;
+	--maker-color:#ff7b16;
+}
+
+body{
+	margin: 0;
+}
+
+.flex-center{
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.username-input{
+	border:none;
+	padding: 4px;
+	border-bottom: 3px solid #0f0f0f;
+	margin: 0 5px;
+}
+
+button{
+	outline: none;
+	border-radius: 0;
+	padding: 3px 5px;
+	background-color: var(--button-bg);
+	margin: 0 5px;
+    border: 2px solid;
+    cursor: pointer;
+}
+
+.header{
+	z-index: 100;
+	width: 100%;
+	background-color: var(--header-bg);
+	height: 75px;
+	position: fixed;
+}
+
+.select-current-method{
+	padding: 4px;
+}
+
+.main-content{
+	min-height: 500px;
+	background-color: var(--body-bg);
+	padding-top: 90px;
+	text-align: center;
+}
+
+.maker-tag{
+	font-size: 15px;
+	font-family: sans-serif;
+	text-align: center;
+	background-color: var(--maker-color);
+	color: white;
+	padding: 5px 0;
+}
+
+
+/* items.html classes */
+
+.card{
+    border-radius: 10px;
+    box-shadow: 1px 1px 10px 2px #000;
+    cursor: pointer;
+    display: inline-block;
+    position: relative;
+    margin: 1.4rem;
+}
+
+.card-poster-img{
+	width: 240px;
+	height: 240px;
+	overflow: hidden;
+}
+
+.card-title{
+	font-family: sans-serif;
+    background-color: #2b2b2bd9;
+    color: white;
+    height: 70px;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

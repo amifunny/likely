@@ -7,17 +7,75 @@
 
 	<div class="card">
 		
-		<div class="card-poster">
+		<div class="card-poster" data-genre={{item[3]}}>
 			<img class="card-poster-img" src={{item[4]}} >
+			<div class="feedback-cover flex-center">
+				
+				<div>
+					<button class="feedback-btn like-btn">
+						<span class="material-icons">
+							thumb_up
+						</span>
+					</button>
+					<button class="feedback-btn dislike-btn">
+						<span class="material-icons">
+							thumb_down
+						</span>
+					</button>
+				</div>
+					
+			</div>
 		</div>
 
 		<div class="card-title flex-center">
 			<div>
 				<div>{{item[1]}}</div>
-				<div>{{item[2]}} IMDB</div>
+				<div>{{item[3]}}</div>
 			</div>	
 		</div>
 
 	</div>
 
 {% endfor %}
+<script type="text/javascript">
+	
+	function send_feedback(genre,feedback_type){
+
+		$.ajax({
+			cache:false,
+			method:"POST",
+			data:{
+				'categ':genre,
+				'feedback':feedback_type
+			},
+			url:'/feedback',
+			error:function(error,xhr,status) {
+					return false
+			}
+		}).done(function(data){
+			console.log(data);
+		});
+
+	}
+
+	function btn_click(btn,feedback_type){
+
+		var parent = $(btn).parents('.card-poster');
+		let str_genre = $(parent).attr('data-genre');
+		send_feedback(str_genre,feedback_type)
+	}
+
+	$('.like-btn').click(function(){
+		
+		btn_click( this , 1.0);	
+		
+	});
+
+
+	$('.dislike-btn').click(function(){
+		
+		btn_click( this , 0.0);	
+		
+	});
+
+</script>

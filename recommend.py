@@ -17,22 +17,35 @@ class MultiArmedBandit():
 		# If no `init_estimates` are provided, Use 1.0
 		# estimate for each arm which is optimistic
 		# for exploration
-		if init_estimates is None;
-			self.arm_estimates = np.ones( (1,num_arms) )
+		if init_estimates is None:
+			self.a = np.ones( (1,num_arms) )
+			self.b = np.ones( (1,num_arms) )
+
 		else:
-			self.arm_estimates = np.array( init_estimates )
+			self.a = np.array( init_estimates[0] )
+			self.b = np.array( init_estimates[1] )
 
 		# Store count of number of times a category was
 		# recommended
-		self.counts = [0]*num_arms
+		# self.counts = [0]*num_arms
 
-	def get_estimates
+	def get_estimates(self):
+		return [self.a,self.b]
 
-	def predict(self,
-				num_of preds=1):
+	def recommend(self,
+				num_of_preds=1):
+
+		predictions = []
+
+		for i in range(num_of_preds):
+			sampled_q = np.random.beta(self.a[0,:],self.b[0,:])
+			categ_choise = np.argmax( sampled_q )
+			predictions.append( categ_choise )
+
+		return predictions,self.get_estimates()
 
 	def feedback(self,
-				positive_category,
+				positive_category=None,
 				positive_reward=1.0,
 				negative_category=None,
 				negative_reward=0.0,
@@ -67,16 +80,21 @@ class MultiArmedBandit():
 			assumed_matrix[ positive_category ] = 1.0
 
 			sum_reward = np.sum( assumed_matrix , 0 )
-			self.arm_estimates += sum_reward/self.counts
+			self.a += sum_reward/self.counts
+			self.b += sum_reward/self.counts
 
 		else:
 
-			# Update Estimates
-			self.arm_estimates[0,positive_category] += positive_reward/self.counts[0,positive_category]
+			if positive_category is not None:
+				self.a[0,positive_category] += positive_reward
+				self.b[0,positive_category] += 1 - positive_reward
 
 			if negative_category is not None:
-				self.arm_estimates[0,negative_category] += negative_reward/self.counts[0,negative_category]
+				self.a[0,negative_category] += negative_reward
+				self.b[0,negative_category] += 1 - negative_reward
 
+		return self.get_estimates()
+			
 
 
 

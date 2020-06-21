@@ -20,9 +20,10 @@
 
 # print( content.split('|') )	
 
-
 import numpy as np
-
-print( np.random.beta( np.array([1.0,0.1]),np.array([1.0,0.1]) , (10,2) ) )
-
+tp = np.random.rand( 4,4 )
+U , sigma , V = np.linalg.svd( tp )
+print( U )
+print( sigma )
+print( V )
 

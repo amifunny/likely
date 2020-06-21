@@ -25,12 +25,14 @@ class MultiArmedBandit():
 			self.a = np.array( init_estimates[0] )
 			self.b = np.array( init_estimates[1] )
 
-		# Store count of number of times a category was
-		# recommended
-		# self.counts = [0]*num_arms
 
-	def get_estimates(self):
+	def get_info(self):
+		# Return parameters info or value
 		return [self.a,self.b]
+
+	def get_avg_estimates():
+		# Returns avg value of each arm/category
+		return self.a/(self.a+self.b)
 
 	def recommend(self,
 				num_of_preds=1):
@@ -42,7 +44,7 @@ class MultiArmedBandit():
 			categ_choise = np.argmax( sampled_q )
 			predictions.append( categ_choise )
 
-		return predictions,self.get_estimates()
+		return predictions,self.get_info()
 
 	def feedback(self,
 				positive_category=None,
@@ -80,8 +82,8 @@ class MultiArmedBandit():
 			assumed_matrix[ positive_category ] = 1.0
 
 			sum_reward = np.sum( assumed_matrix , 0 )
-			self.a += sum_reward/self.counts
-			self.b += sum_reward/self.counts
+			self.a += sum_reward
+			self.b += 1 - sum_reward
 
 		else:
 
@@ -93,11 +95,18 @@ class MultiArmedBandit():
 				self.a[0,negative_category] += negative_reward
 				self.b[0,negative_category] += 1 - negative_reward
 
-		return self.get_estimates()
+		return self.get_info()
 			
 
+class SVD():
 
+	def __init__(self,A):
 
+		self.A = A
+
+	def __call__():
+
+		U,sigma,V_T = np.linalg.svd(A)
 
 
 

@@ -31,10 +31,12 @@ def after_request(response):
 @app.route("/start_session",methods=["POST","GET"])
 def start_session():
 
-	# When new user is created
-
+	# When new user is created,
+	# clear old session
 	session.clear()
+	# Get given recommendation method
 	method = request.form.get('recommend_method')
+	# username to store interaction data
 	username = request.form.get('username')
 
 	# store in session
@@ -73,7 +75,7 @@ def home():
 
 def get_items( indices ):
 
-	df = pd.read_csv('static/dataset/Movie_data_1k.csv')
+	df = pd.read_csv('static/dataset/Movie_dataset.csv')
 	row_list = df.to_numpy()[ indices ].tolist()
 
 	return row_list
@@ -113,7 +115,7 @@ def get_recommended_indices(categ_list):
 	for categ in categ_list:
 
 		# Search for rows with 'Genre' as given `categ`
-		categ_df = shuffle_df[ shuffle_df['Genre'].str.contains( categ ) ] 
+		categ_df = shuffle_df[ shuffle_df['genre'].str.contains( categ ) ] 
 		# This excludes already picked indices
 		excluded_df = categ_df[~categ_df.index.isin( picked_indices )]
 		idx = excluded_df.index[0]
@@ -156,6 +158,7 @@ def feedback():
 
 	# Make a list of it
 	keywords = keyword_text.split('|')
+
 
 	# Get index of feedback category
 	feedback_categ = []

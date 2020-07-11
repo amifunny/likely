@@ -1,6 +1,7 @@
 # Library to help create recommendation agents.
 
 import numpy as np
+from scipy.sparse.linalg import svds
 
 # Methods Implemented are :- 
 #  1) Multi Armed Bandit

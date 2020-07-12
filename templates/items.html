@@ -7,8 +7,8 @@
 
 	<div class="card">
 		
-		<div class="card-poster" data-genre={{item[3]}}>
-			<img class="card-poster-img" src={{item[4]}} >
+		<div class="card-poster" data-id={{item.movieId}}>
+			<img class="card-poster-img" src={{item.poster}} >
 			<div class="feedback-cover flex-center">
 				
 				<div>
@@ -29,8 +29,8 @@
 
 		<div class="card-title flex-center">
 			<div>
-				<div>{{item[1]}}</div>
-				<div>{{item[3]}}</div>
+				<div>{{item.title}}</div>
+				<div>{{item.genre}}</div>
 			</div>	
 		</div>
 
@@ -39,13 +39,13 @@
 {% endfor %}
 <script type="text/javascript">
 	
-	function send_feedback(genre,feedback_type){
+	function send_feedback(movie_id,feedback_type){
 
 		$.ajax({
 			cache:false,
 			method:"POST",
 			data:{
-				'categ':genre,
+				'id':movie_id,
 				'feedback':feedback_type
 			},
 			url:'/feedback',
@@ -61,8 +61,8 @@
 	function btn_click(btn,feedback_type){
 
 		var parent = $(btn).parents('.card-poster');
-		let str_genre = $(parent).attr('data-genre');
-		send_feedback(str_genre,feedback_type)
+		let movie_id = $(parent).attr('data-id');
+		send_feedback(movie_id,feedback_type)
 	}
 
 	$('.like-btn').click(function(){

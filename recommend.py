@@ -15,25 +15,27 @@ class MultiArmedBandit():
 
 	def __init__(self,item_csv,item_column):
 		
-		info = {}
-
 		item_df = pd.read_csv(item_csv)
 		keywords_list = item_df[item_column].explode().unique() 
 
 		self.keywords = {}
-		for i,key in keywords_list:
+		for i,key in enumerate(keywords_list):
 			self.keywords[key] = i
-
-		info['keywords'] = self.keywords
 
 		self.num_arms = len(self.keywords)
 
-		info['num_arms'] = self.num_arms
 
 		self.a = np.ones( (1,self.num_arms) )
 		self.b = np.ones( (1,self.num_arms) )
 
-		info['estimates'] = [self.a,self.b]
+
+
+	def get_info(self):
+		info = {}
+
+		self.info['keywords'] = self.keywords
+		self.info['num_arms'] = self.num_arms
+		self.info['estimates'] = [self.a,self.b]
 
 		return info
 
@@ -52,9 +54,10 @@ class MultiArmedBandit():
 	def recommend(self,
 				num_preds,
 				item_csv,
-				item_column
-				weight_csv,
-				weight_column,
+				item_column,#movieId
+				keyword_column,#genre
+				weight_column,#imdb
+				prev_watch_ids,
 				order='DESC'):
 
 
@@ -63,13 +66,29 @@ class MultiArmedBandit():
 		for i in range(num_of_preds):
 			sampled_q = np.random.beta(self.a[0,:],self.b[0,:])
 			key_choice = np.argmax( sampled_q )
+			categ_choice = self.keywords[ key_choice ]
 			predictions.append( categ_choice )
+
+		set_pred = set(predictions)
 
 		# Get Sample on from dataframe on
 		# based on weight colums and value
 		item_df = pd.read_csv(item_csv)
-		item_df['Matches']=pd.DataFrame(item_df.item_column.values.tolist()).isin(self.keywords).sum(1)
-		item_df
+		item_df = item_df.assign(inter_index=[len(set(each_genre) & set_pred) for each_genre in item_df.genre])
+
+		picked_ids = prev_watch_ids
+		for categ in predictions:
+
+			# Search for rows with 'genre' for given `categ`
+			categ_df = item_df[ item_df['genre'].str.join('|').str.contains(categ) ]
+
+			# This excludes already picked indices
+			excluded_df = categ_df[~categ_df['movieId'].isin( picked_indices )]
+
+			selected_row = excluded_df.sort_values(['imdb score','inter_index'],ascending=False).iloc(0)
+			item_id = item_id['movieId'].values[0]
+
+			picked_ids.append(item_id)
 
 
 		return predictions,self.get_info()
@@ -82,7 +101,7 @@ class MultiArmedBandit():
 				assume_negative=False
 				):
 
-		"""
+		"""	
 			Args :
 				positive_category : (type list) Categories obtained from user interaction like 
 					clicks to act as positive feedback to update `arm_estimates`
@@ -129,7 +148,7 @@ class MultiArmedBandit():
 class SVD():
 
 	def __init__(self,
-				latent_size
+				latent_size,
 				rating_csv,
 				user_column,
 				item_column,
@@ -145,50 +164,54 @@ class SVD():
 
 		self.User_Vector,self.Weight,self.Item_Vector = svds( normalised_values , k = latent_size )
 
+	def get_info():
+
 		info = {}
 		info['User'] = self.User_Vector
 		info['Item'] = self.Item_Vector
 		info['Weight'] = self.Weight
 		info['Pivot_matrix'] = self.pivot_matrix
-		info['Pivot_matrix_col'] = self.pivot_matrix.columns
 		return info
 
-	def item_based(prev_watch_id,num_preds):
+	def get_fit_knn(matrix):
 
-		effective_idx = prev_watch_id[-num_preds:]
+		self.knn_model = NearestNeighbors( metric='cosine' , algorithm='brute',
+									  n_neighbors=20, n_jobs=-1)
+		
+		self.knn_model.fit( matrix )
 
-		items = (self.Item_Vector.T)[prev_watch_id]
+	def item_based(prev_watch_ids,num_preds):
+
+		items = (self.Item_Vector.T)[prev_watch_ids]
 
 		predictions = []
 
 		num_of_neighbors = 10
-		for i in range(num_preds):
-			indices,weights = self.knn.kneighbors( items , n_neighbors=num_of_neighbors )
-			non_watched_idx = list(set(indices) - set(items))
-			predictions.append( non_watched_idx[0] )
+		weights,indices = self.knn.kneighbors( items , n_neighbors=num_of_neighbors )
+		pred_ids = (pivot_matrix.T).index[ indices[0] ]
+		non_watched_idx = list(set(pred_ids) - set(prev_watch_ids))
+		predictions.extend( non_watched_idx[:num_preds] )
 
 		return predictions	
 
-	def user_item_based(prev_watch_id,user_id,num_preds):
+	def user_item_based(prev_watch_ids,user_id,num_preds):
 
 		predicted_rating = np.dot( np.dot(self.User_Vector[user_id],self.Weight) , self.Item_Vector )
-		predicted_df = pd.DataFrame( predicted_rating.T , index = info['Pivot_matrix_col'] , columns='Rating' )
+		predicted_df = pd.DataFrame( predicted_rating.T , index = self.pivot_matrix.columns , columns='rating' )
 
-		predicted_ids = predicted_df[ ~predicted_df['movieId'].isin(predicted_df)].
-        				sort_values('Rating', ascending = False).index.values[num_preds]
+		excluded_df = predicted_df[ ~predicted_df['movieId'].isin(prev_watch_ids)]
+		predicted_ids = excluded_df.sort_values('rating', ascending = False).index.values[-num_preds:]
 
-        return predicted_ids
+		return predicted_ids
 			
 
 class KNN(object):
 
 	def __init__(self):
 
-		self.knn_model = NearestNeighbors( metric='cosine' algorithm='brute',
+		self.knn_model = NearestNeighbors( metric='cosine' , algorithm='brute',
 									  n_neighbors=20, n_jobs=-1)
-		info['knn_model'] = knn_model
-		return info
-
+	
 	def fit_model(user_csv,
 				  user_column,
 				  item_csv,
@@ -222,18 +245,18 @@ class KNN(object):
 						 value_column,
 						 user_id,
 						 num_preds,
-						 prev_watch_id):
+						 prev_watch_ids):
 
 		num_similar_users = 5
 		distance,indexes = knn_model.kneighbors( csr_matrix[user_id] , n_neighbors=num_similar_users )
 
 		user_df = pd.read_csv(user_csv)
 
-		user_df = (user_df[[indexes],:]).
-                  sort_values([value_column], ascending=False).
-                  [ user_df[value_column]>2.5 ][~user_df[item_column].isin(prev_watch_id)]
+		user_df = (user_df[[indexes],:]).sort_values(
+					[value_column], ascending=False
+				  )[ user_df[value_column]>2.5 ][~user_df[item_column].isin(prev_watch_ids)]
 
-        return user_df.index.values
+		return user_df.index.values[:num_preds]
 
 
 

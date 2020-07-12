@@ -30,12 +30,12 @@
 
 				<div class="current-method">
 					<select name="recommend_method" class="select-current-method">
-						<option value="0">Select a Method ...</option>
+						<option>Select a Method ...</option>
 						<option 
-						{% if method=="1" %}
+						{% if method==1 %}
 							selected="" 
 						{% endif %}
-						value={{method}}>Multi Armed Bandits</option>
+						value=0>Multi Armed Bandits</option>
 					</select>
 				</div>
 

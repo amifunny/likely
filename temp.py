@@ -27,3 +27,21 @@ print( U )
 print( sigma )
 print( V )
 
+with open('static/keyword.txt','r') as file:
+		keyword_text = file.read()
+		file.close()	
+
+	keywords = keyword_text.split('|')
+
+	user_dict = {}
+
+	# ** "likely" system started
+	# Selecting `MultiArmedBandit`
+	lk_agent = MultiArmedBandit( len(keywords) )
+	info = lk_agent.get_info()
+	user_dict[ username ] = [info[0].tolist(),info[1].tolist()]
+
+	with open('static/userdata.json','w') as file:
+		json.dump(user_dict,file)
+		file.close()	
+	

@@ -28,6 +28,15 @@ def after_request(response):
 	response.headers['Pragma'] = 'no-cache'
 	return response
 
+rec_switch = {
+	0:'MultiArmedBandit'
+	1:'SVD Collaborative Item-User'
+	2:'SVD+KNN Item-Item'
+	3:'KNN User-User'
+}
+
+info_filename = None
+
 @app.route("/start_session",methods=["POST","GET"])
 def start_session():
 
@@ -43,26 +52,31 @@ def start_session():
 	session['method'] = method
 	session['username'] = username
 
-	with open('static/keyword.txt','r') as file:
-		keyword_text = file.read()
-		file.close()	
+	global info_filename
+	info_filename =  'user/{}_info.pkl'
 
-	keywords = keyword_text.split('|')
+	initialize_method( method )
 
-	user_dict = {}
-
-	# ** "likely" system started
-	# Selecting `MultiArmedBandit`
-	lk_agent = MultiArmedBandit( len(keywords) )
-	info = lk_agent.get_info()
-	user_dict[ username ] = [info[0].tolist(),info[1].tolist()]
-
-	with open('static/userdata.json','w') as file:
-		json.dump(user_dict,file)
-		file.close()	
-	
 	return redirect("/")
 
+def save_info(info):
+	global info_filename
+
+	with open(info_filename,'wb') as file:
+		file.write(info)
+		file.close()
+
+def intialize_method(method):
+
+	if method==0:
+		info = MultiArmedBandit('dataset/Movie_dataset.csv')
+	elif method==1 or method==2:
+		info = SVD(50,'dataset/User_dataset.csv','userId',
+				   'movieId','rating')
+	elif method==3:
+		info = KNN()		 	
+	
+	save_info(info)
 
 @app.route("/")
 def home():
@@ -76,6 +90,7 @@ def home():
 def get_items( indices ):
 
 	df = pd.read_csv('static/dataset/Movie_dataset.csv')
+	df.to_dict('records')
 	row_list = df.to_numpy()[ indices ].tolist()
 
 	return row_list
@@ -124,19 +139,24 @@ def get_recommended_indices(categ_list):
 
 	return picked_indices
 
+def use_recommendation():
+
+	method = session.get( 'method' )
+
+	if method==0:
+		
+	elif method==1:
+
+	elif method==2:
+	
+	elif method==3:
+		 	
+
 
 # Render categorical items
 @app.route("/load_content",methods=["POST","GET"])
 def load_content():
 
-	# get list of "likely" categories as int using recommendation method
-	categ_list_int = get_recommend_categ()
-
-	# convert recommended category int into word for searching
-	categ_list = get_keywords( categ_list_int )
-
-	# search for keyword in dataset and return there index ids
-	indices = get_recommended_indices(categ_list)
 
 	# Fetch complete info of `indices`
 	items_list = get_items(indices)
@@ -146,6 +166,18 @@ def load_content():
 
 @app.route('/feedback',methods=["POST","GET"])
 def feedback():
+
+	method = session.get('method')
+
+	if method==0:
+
+		
+	elif method==1:
+
+	elif method==2:
+	
+	elif method==3:
+
 
 	# Obtaining feedback from frontend
 	categ = request.form.get('categ')
@@ -203,4 +235,12 @@ def feedback():
 
 
 
+	# get list of "likely" categories as int using recommendation method
+	categ_list_int = get_recommend_categ()
+
+	# convert recommended category int into word for searching
+	categ_list = get_keywords( categ_list_int )
+
+	# search for keyword in dataset and return there index ids
+	indices = get_recommended_indices(categ_list)
 

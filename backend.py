@@ -124,10 +124,14 @@ def get_user_watch_ids():
 	if watch_array.size==0:
 		return watch_array
 
-	user_watch_ids = watch_array[:,1]
-	user_watch_ids = user_watch_ids.astype(np.int) 
+	all_user_watch_ids = watch_array[:,1]
+	all_user_watch_ids = all_user_watch_ids.astype(np.int) 
 	
-	return user_watch_ids.tolist()
+	pos_user_watch_ids = watch_array[watch_array[:,2]=="5.0"]
+	pos_user_watch_ids = pos_user_watch_ids[:,1]
+	pos_user_watch_ids = pos_user_watch_ids.astype(np.int) 
+
+	return all_user_watch_ids.tolist(),pos_user_watch_ids.tolist()
 
 def make_temp_csv():
 
@@ -140,7 +144,7 @@ def make_temp_csv():
 	user_df = pd.read_csv(root+'User_dataset.csv')
 	current_df = pd.DataFrame( watch_array , columns=['userId','movieId','rating','timestamp'] )
 	new_df = user_df.append( current_df , ignore_index=True )
-	new_df.to_csv('static/temp/Current_User_dataset.csv')
+	new_df.to_csv('static/temp/Current_User_dataset.csv',index=False)
 
 	return watch_array
 
@@ -151,7 +155,8 @@ def use_recommendation(num_preds):
 	method = session.get( 'method' )
 	user_id = session.get( 'user_id' )
 
-	user_watch_ids = get_user_watch_ids()
+	user_watch_ids,pos_user_watch_ids = get_user_watch_ids()
+
 	if len(user_watch_ids)==0:
 		movie_df = pd.read_csv('static/dataset/Movie_dataset.csv')
 		indices = movie_df.sample(num_preds).index
@@ -178,8 +183,17 @@ def use_recommendation(num_preds):
 							num_preds
 							)
 	elif method==2:
+
+		if len(pos_user_watch_ids)==0:
+			movie_df = pd.read_csv('static/dataset/Movie_dataset.csv')
+			indices = movie_df.sample(num_preds).index
+			return indices
+
+		recommender_global = SVD(50,'static/temp/Current_User_dataset.csv','userId',
+		   'movieId','rating')
+		recommender_global.get_fit_knn( recommender_global.Item_Vector.transpose() )
 		predicted_indices = recommender_global.item_based(
-							user_watch_ids,
+							pos_user_watch_ids,
 							num_preds
 							)
 	elif method==3:

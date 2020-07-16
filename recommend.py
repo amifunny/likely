@@ -185,30 +185,51 @@ class SVD():
 
 		self.knn_model = NearestNeighbors( metric='cosine' , algorithm='brute',
 									  n_neighbors=20, n_jobs=-1)
-		
+		print(matrix.shape)
 		self.knn_model.fit( matrix )
 
 	def item_based(self,prev_watch_ids,num_preds):
 
-		items = (self.Item_Vector.T)[prev_watch_ids]
+		all_movie_ids = self.pivot_matrix.columns
+		item_idx = []
+		for i,movie_id in enumerate(all_movie_ids):
+			if movie_id in prev_watch_ids:
+				item_idx.append(i)
+
+		items = (self.Item_Vector.transpose())[item_idx]
+		print( items.shape )
 
 		predictions = []
 
-		num_of_neighbors = 10
-		weights,indices = self.knn.kneighbors( items , n_neighbors=num_of_neighbors )
-		pred_ids = (pivot_matrix.T).index[ indices[0] ]
+		if len(prev_watch_ids)*5<20:
+			num_of_neighbors = 20
+		else:
+			num_of_neighbors = 5
+
+		weights,indices = self.knn_model.kneighbors( items , n_neighbors=num_of_neighbors )
+		pred_ids = ( self.pivot_matrix.transpose() ).index[ indices.flatten() ]
 		non_watched_idx = list(set(pred_ids) - set(prev_watch_ids))
+		print(non_watched_idx)
+		np.random.shuffle(non_watched_idx)
 		predictions.extend( non_watched_idx[:num_preds] )
 
 		return predictions	
 
+	# TODO : Duplicate enrty in "watch json" causing problem.
+	# Also limit the 'prev_watch_ids'
 	def user_item_based(self,prev_watch_ids,user_id,num_preds):
 
-		predicted_rating = np.dot( np.dot(self.User_Vector[user_id],self.Weight) , self.Item_Vector )
-		predicted_df = pd.DataFrame( predicted_rating.T , index = self.pivot_matrix.columns , columns='rating' )
+		pivot_indices = self.pivot_matrix.index.values.tolist()
+		user_idx = pivot_indices.index( user_id )
 
-		excluded_df = predicted_df[ ~predicted_df['movieId'].isin(prev_watch_ids)]
-		predicted_ids = excluded_df.sort_values('rating', ascending = False).index.values[-num_preds:]
+		predicted_rating = np.dot( 
+						   np.dot( np.reshape( self.User_Vector[user_idx] , (1,-1) ) , np.diag( self.Weight ) )
+						   , self.Item_Vector )
+		predicted_df = pd.DataFrame( predicted_rating.transpose() , 
+						index = self.pivot_matrix.columns.values.tolist() , columns=['rating'] )
+
+		excluded_df = predicted_df[ ~predicted_df.index.isin(prev_watch_ids)]
+		predicted_ids = excluded_df.sort_values('rating', ascending = False).index.values[:num_preds]
 
 		return predicted_ids
 			

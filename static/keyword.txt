@@ -1,1 +1,1 @@
-War|Film-Noir|Biography|Mystery|News|Music|Comedy|Short|Sci-Fi|Musical|Horror|History|Western|Crime|Documentary|Talk-Show|Family|Thriller|Fantasy|Action|Drama|Animation|Romance|Adventure|Sport
+Action|Adventure|Animation|Biography|Comedy|Crime|Documentary|Drama|Family|Fantasy|Film-Noir|History|Horror|Music|Musical|Mystery|News|Romance|Sci-Fi|Short|Sport|Talk-Show|Thriller|War|Western

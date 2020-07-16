@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import json
 import pickle
+import random
 
 app = Flask(__name__)
 
@@ -38,6 +39,8 @@ def after_request(response):
 
 info_filename = None
 recommender_global = None
+root = 'static/dataset/'
+NUM_PREDS = 20
 
 @app.route("/start_session",methods=["POST","GET"])
 def start_session():
@@ -53,6 +56,7 @@ def start_session():
 	# store in session
 	session['method'] = method
 	session['username'] = username
+	session['user_id'] = random.randint( 2*(10**3),3*(10**3) )
 
 	global info_filename
 	info_filename =  'static/user/{}_{}_info.pkl'.format(username,method)
@@ -83,11 +87,12 @@ def initialize_method(method):
 		recommender_global = MultiArmedBandit('static/dataset/Movie_dataset.csv','genre')
 		info = recommender_global.get_info()
 	elif method==1 or method==2:
-		info = SVD(50,'dataset/User_dataset.csv','userId',
+		recommender_global = SVD(50,root+'User_dataset.csv','userId',
 				   'movieId','rating')
+		info = recommender_global.get_info()
 	elif method==3:
-		info = KNN()		 	
-	
+		recommender_global = KNN()		 	
+		info = recommender_global.get_info()
 	save_info(info)
 
 @app.route("/")
@@ -96,81 +101,96 @@ def home():
 	username = session.get('username')
 	method = session.get('method')
 
+	message = get_method_message(method)
+
 	# Renders demo home page
-	return render_template("home.html",username=username,method=method)
+	return render_template("home.html",username=username,method=method,message=message)
 
 def get_items( indices ):
 
-	df = pd.read_csv('static/dataset/Movie_dataset.csv')
-	row_list = df.loc[ indices , : ].to_dict('records')
+	df = pd.read_csv(root+'Movie_dataset.csv')
+	row_list = df[ df['movieId'].isin(indices) ].to_dict('records')
 
 	return row_list
 
-# def get_recommend_categ():
-	
-# 	with open('static/userdata.json', 'r') as file: 
-# 		# Reading from json file 
-# 		user_obj = json.load(file) 
-# 		file.close()
+def get_user_watch_ids():
 
-# 	username = session['username']
-
-# 	lk_agent = MultiArmedBandit( len(user_obj[username][0]) , user_obj[username] )	
-# 	preds , user_dict = lk_agent.recommend(20)
-
-# 	return preds
-
-# def get_keywords(categ_list_int):
-
-# 	with open('static/keyword.txt','r') as file:
-# 		keyword_text = file.read()
-# 		file.close()	
-
-# 	keywords = keyword_text.split('|')
-
-# 	categ_keys = [ keywords[i] for i in categ_list_int ]
-# 	return categ_keys
-
-# def get_recommended_indices(categ_list):
-
-# 	df = pd.read_csv('static/dataset/Movie_data_1k.csv')
-# 	shuffle_df = df.sample(frac=1)
-
-# 	picked_indices = []
-
-# 	for categ in categ_list:
-
-# 		# Search for rows with 'Genre' as given `categ`
-# 		categ_df = shuffle_df[ shuffle_df['genre'].str.contains( categ ) ] 
-# 		# This excludes already picked indices
-# 		excluded_df = categ_df[~categ_df.index.isin( picked_indices )]
-# 		idx = excluded_df.index[0]
-
-# 		picked_indices.append(idx)	
-
-# 	return picked_indices
-
-def use_recommendation():
-
-	method = session.get( 'method' )
-
-	file = open('info_filename','wb')
-	pickle.dump( info , file )
-
-	with open('user_watch.json','r') as file:
+	with open('static/user_watch.json','r') as file:
 		watch_obj = json.load(file) 
 		file.close()
 
-	watch_indices = watch_obj[ session.get('username') ]
+	watch_array = np.array( watch_obj[ session.get('username') ] )
 
-	# if method==0:
-		
-	# elif method==1:
+	if watch_array.size==0:
+		return watch_array
 
-	# elif method==2:
+	user_watch_ids = watch_array[:,1]
+	user_watch_ids = user_watch_ids.astype(np.int) 
 	
-	# elif method==3:
-		 	
+	return user_watch_ids.tolist()
+
+def make_temp_csv():
+
+	with open('static/user_watch.json','r') as file:
+		watch_obj = json.load(file) 
+		file.close()
+
+	watch_array = np.array( watch_obj[ session.get('username') ] )
+
+	user_df = pd.read_csv(root+'User_dataset.csv')
+	current_df = pd.DataFrame( watch_array , columns=['userId','movieId','rating','timestamp'] )
+	new_df = user_df.append( current_df , ignore_index=True )
+	new_df.to_csv('static/temp/Current_User_dataset.csv')
+
+	return watch_array
+
+def use_recommendation(num_preds):
+
+	global recommender_global
+
+	method = session.get( 'method' )
+	user_id = session.get( 'user_id' )
+
+	user_watch_ids = get_user_watch_ids()
+	if len(user_watch_ids)==0:
+		movie_df = pd.read_csv('static/dataset/Movie_dataset.csv')
+		indices = movie_df.sample(num_preds).index
+		return indices
+
+	make_temp_csv()
+
+	if method==0:
+
+		predicted_indices = recommender_global.recommend(
+				num_preds,
+				root+'Movie_dataset.csv',
+				'movieId',#movieId
+				'genre',#genre
+				'imdb score',#imdb
+				user_watch_ids,
+				order='DESC')
+	elif method==1:
+		recommender_global = SVD(50,'static/temp/Current_User_dataset.csv','userId',
+		   'movieId','rating')
+		predicted_indices = recommender_global.user_item_based(
+							user_watch_ids,
+							user_id,
+							num_preds
+							)
+	elif method==2:
+		predicted_indices = recommender_global.item_based(
+							user_watch_ids,
+							num_preds
+							)
+	elif method==3:
+		predicted_indices = recommender_global.get_user_similar(
+			root+'Movie_dataset.csv'
+			'movieId',
+			'rating',
+			 user_id,
+			 num_preds,
+			 user_watch_ids
+			)		 	
 
 	return predicted_indices
 
@@ -178,7 +198,7 @@ def use_recommendation():
 @app.route("/load_content",methods=["POST","GET"])
 def load_content():
 
-	indices = use_recommendation()
+	indices = use_recommendation(NUM_PREDS)
 
 	# Fetch complete info of `indices`
 	items_list = get_items(indices)
@@ -204,7 +224,7 @@ def feedback():
 		file.close()
 
 	with open('static/user_watch.json', 'w') as file: 
-		watch_array.append( [movie_id,feedback_rating] )
+		watch_array.append( [session.get('user_id'),movie_id,feedback_rating,""] )
 		user_obj[session.get('username')] = watch_array
 		json.dump(user_obj,file)
 		file.close()
@@ -221,7 +241,7 @@ def BanditFeedback(movie_id,feedback_int):
 		keyword_text = file.read()
 		file.close()	
 
-	keywords = keyword_text.split('|')
+	keywords = sorted( keyword_text.split('|') )
 
 	movie_df = pd.read_csv( 'static/dataset/Movie_dataset.csv' , converters={'genre': eval} )
 	genre_list = movie_df[movie_df['movieId']==movie_id].iloc[0]['genre']
@@ -229,7 +249,6 @@ def BanditFeedback(movie_id,feedback_int):
 	# Get index of feedback category
 	feedback_categ = []
 	for each_categ in genre_list:
-		print(each_categ)
 		index = keywords.index( each_categ )
 		feedback_categ.append( index )
 
@@ -239,4 +258,44 @@ def BanditFeedback(movie_id,feedback_int):
 		user_info = recommender_global.feedback(negative_category=feedback_categ)
 
 	save_info(user_info)
+
+
+# -----------------------------------------------------------------------------------------
+# `get_method_message()` shows gives summary message
+# about the chosen method
+def get_method_message(method):
+
+	msg = ""
+	if method==0:
+		msg = ("MultiArmedBandit is non-contextual and give results "
+			   "using most rewarding keyword. In this case, Movie Genre."
+			   "Observe the genre you click more, will appear more in recommendation.")
+	elif method==1:
+		msg = ("SVD uses User and Item pattern to get latent factor. "
+			   "These factors help us predict for new users. "
+			   "Recommendation you observe are from similar pattern of other user.")
+	elif method==2:
+		msg = ("SVD gives us latent factors of each Items(i.e Movies). "
+			   "Then Recommendations are based on Nearest Neighbors of items(i.e. Movie Liked) "
+			   "by current user(you).")
+	elif method==3:
+		msg = ("Based on your movie pattern, finds similar users "
+			   "and movie rated good by them are Recommended.")
+
+
+	return msg
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

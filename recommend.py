@@ -5,7 +5,7 @@ from scipy.sparse.linalg import svds
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse import csr_matrix
-
+import ast
 # Methods Implemented are :- 
 #  1) Multi Armed Bandit
 
@@ -13,14 +13,13 @@ from scipy.sparse import csr_matrix
 
 class MultiArmedBandit():
 
-	def __init__(self,item_csv,item_column):
+	def __init__(self,item_csv,key_column):
 		
 		item_df = pd.read_csv(item_csv)
-		keywords_list = item_df[item_column].explode().unique() 
+		keywords_list = item_df[key_column].apply(lambda x: ast.literal_eval(x))
+		keywords_list = keywords_list.explode().unique() 
 
-		self.keywords = {}
-		for i,key in enumerate(keywords_list):
-			self.keywords[key] = i
+		self.keywords = sorted(keywords_list)
 
 		self.num_arms = len(self.keywords)
 
@@ -31,11 +30,12 @@ class MultiArmedBandit():
 
 
 	def get_info(self):
+		
 		info = {}
 
-		self.info['keywords'] = self.keywords
-		self.info['num_arms'] = self.num_arms
-		self.info['estimates'] = [self.a,self.b]
+		info['keywords'] = self.keywords
+		info['num_arms'] = self.num_arms
+		info['estimates'] = [self.a,self.b]
 
 		return info
 
@@ -63,7 +63,7 @@ class MultiArmedBandit():
 
 		predictions = []
 
-		for i in range(num_of_preds):
+		for i in range(num_preds):
 			sampled_q = np.random.beta(self.a[0,:],self.b[0,:])
 			key_choice = np.argmax( sampled_q )
 			categ_choice = self.keywords[ key_choice ]
@@ -74,24 +74,30 @@ class MultiArmedBandit():
 		# Get Sample on from dataframe on
 		# based on weight colums and value
 		item_df = pd.read_csv(item_csv)
+		item_df[keyword_column] = item_df[keyword_column].apply(lambda x: ast.literal_eval(x))
 		item_df = item_df.assign(inter_index=[len(set(each_genre) & set_pred) for each_genre in item_df.genre])
 
 		picked_ids = prev_watch_ids
+		pred_ids = []
+		shuffle_limit = 50
 		for categ in predictions:
-
 			# Search for rows with 'genre' for given `categ`
 			categ_df = item_df[ item_df['genre'].str.join('|').str.contains(categ) ]
 
 			# This excludes already picked indices
-			excluded_df = categ_df[~categ_df['movieId'].isin( picked_indices )]
+			excluded_df = categ_df[~categ_df['movieId'].isin( picked_ids )]
 
-			selected_row = excluded_df.sort_values(['imdb score','inter_index'],ascending=False).iloc(0)
-			item_id = item_id['movieId'].values[0]
+			selected_rows = excluded_df.sort_values(['imdb score','inter_index'],ascending=False)
+			selected_rows = selected_rows[:shuffle_limit].sample(frac=1)
+			
+			if len(selected_rows.index)!=0:
+				selected_row = selected_rows.iloc[0]
+				item_id = selected_row['movieId']
+				pred_ids.append(item_id)
+				picked_ids.append(item_id)
 
-			picked_ids.append(item_id)
 
-
-		return predictions,self.get_info()
+		return pred_ids
 
 	def feedback(self,
 				positive_category=None,
@@ -157,6 +163,8 @@ class SVD():
 		rating_df = pd.read_csv(rating_csv)
 		pivot_matrix = rating_df.pivot(index=user_column, columns=item_column, values=value_column).fillna(0)
 
+		self.pivot_matrix = pivot_matrix
+
 		all_values = pivot_matrix.values
 		user_avg_value = np.mean( all_values , axis=-1 )
 
@@ -164,7 +172,7 @@ class SVD():
 
 		self.User_Vector,self.Weight,self.Item_Vector = svds( normalised_values , k = latent_size )
 
-	def get_info():
+	def get_info(self):
 
 		info = {}
 		info['User'] = self.User_Vector
@@ -173,14 +181,14 @@ class SVD():
 		info['Pivot_matrix'] = self.pivot_matrix
 		return info
 
-	def get_fit_knn(matrix):
+	def get_fit_knn(self,matrix):
 
 		self.knn_model = NearestNeighbors( metric='cosine' , algorithm='brute',
 									  n_neighbors=20, n_jobs=-1)
 		
 		self.knn_model.fit( matrix )
 
-	def item_based(prev_watch_ids,num_preds):
+	def item_based(self,prev_watch_ids,num_preds):
 
 		items = (self.Item_Vector.T)[prev_watch_ids]
 
@@ -194,7 +202,7 @@ class SVD():
 
 		return predictions	
 
-	def user_item_based(prev_watch_ids,user_id,num_preds):
+	def user_item_based(self,prev_watch_ids,user_id,num_preds):
 
 		predicted_rating = np.dot( np.dot(self.User_Vector[user_id],self.Weight) , self.Item_Vector )
 		predicted_df = pd.DataFrame( predicted_rating.T , index = self.pivot_matrix.columns , columns='rating' )
@@ -212,7 +220,8 @@ class KNN(object):
 		self.knn_model = NearestNeighbors( metric='cosine' , algorithm='brute',
 									  n_neighbors=20, n_jobs=-1)
 	
-	def fit_model(user_csv,
+	def fit_model(self,
+				  user_csv,
 				  user_column,
 				  item_csv,
 				  item_column,
@@ -230,24 +239,25 @@ class KNN(object):
 		self.csr_matrix = csr_matrix( pivot_matrix.values )
 		self.knn_model.fit( csr_matrix )
 
-	def get_info():
+	def get_info(self):
 		info = {}
 		info['knn_model'] = self.knn_model
 		info['csr_matrix'] = self.csr_matrix
 		return info
 
-	def set_info(info):
+	def set_info(self,info):
 		self.knn_model = info['knn_model']
 		self.csr_matrix = info['csr_matrix']
 
-	def get_user_similar(user_csv,
+	def get_user_similar(self,
+						 user_csv,
 						 item_column,
 						 value_column,
 						 user_id,
 						 num_preds,
 						 prev_watch_ids):
 
-		num_similar_users = 5
+		num_similar_users = 10
 		distance,indexes = knn_model.kneighbors( csr_matrix[user_id] , n_neighbors=num_similar_users )
 
 		user_df = pd.read_csv(user_csv)

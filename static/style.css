@@ -1,3 +1,4 @@
+/* Initailize important variable */
 :root{
 	--body-bg:#d5d4ff;
 	--button-bg:beige;
@@ -9,18 +10,24 @@ body{
 	margin: 0;
 }
 
+/*--- TOP USER FORM ---*/
+
+/*shows current user display*/
 .current-user-section{
 	width: 30%;
 }
 
+/*specify width of user form on top*/
 .new-form-section{
 	width: 70%;
 }
 
+/*align all form elements horizontally*/
 .user-form{
 	display: flex;
 }
 
+/*general class to center the children div*/
 .flex-center{
 	display: flex;
 	justify-content: center;
@@ -28,69 +35,106 @@ body{
 }
 
 .username-input{
-	border:none;
-	padding: 4px;
-	border-bottom: 3px solid #0f0f0f;
-	margin: 0 5px;
+	border: none;
+    padding: 0 1rem;
+    border-bottom: 3px solid #7bc0ff;
+    margin: 0 5px;
+    height: 2.5rem;
+    border-radius: 0.4rem 0.4rem 0 0;
 }
 
 button{
+    height: 2rem;
+    padding: 0 1rem;
 	outline: none;
 	border-radius: 0;
-	padding: 3px 5px;
 	background-color: var(--button-bg);
 	margin: 0 5px;
     border: 2px solid;
     cursor: pointer;
 }
 
+/*Make form stick at top and 
+should be above other elements hence
+high z-index*/
 .header{
+    font-family: sans-serif;
+    color: #aacbff;
+    background: #222233;
 	z-index: 100;
 	width: 100%;
-	background-color: var(--header-bg);
 	height: 75px;
 	position: fixed;
 }
 
 .select-current-method{
-	padding: 4px;
+    padding-left: 15px;
+    height: 2.5rem;
+    border-radius: 0;
+    margin: 0 5px;
+}
+
+/*---- Body without head form ---*/
+
+.main-body{
+	padding-top : 90px;
+	background-color: var(--body-bg);
 }
 
 .main-content{
-	min-height: 500px;
-	background-color: var(--body-bg);
-	padding-top: 90px;
+	min-height: 55vh;
 	text-align: center;
 }
 
 .maker-tag{
-	font-size: 15px;
+    padding: 1rem;
+    font-size: 20px;
 	font-family: sans-serif;
 	text-align: center;
 	background-color: var(--maker-color);
 	color: white;
-	padding: 5px 0;
 }
 
+/*--- RECOMMENDATION MESSAGE ---*/
+.method-message{
+    text-align: center;
+    color: #aacbff;
+    background: #222233;
+    display: block;
+    font-size: 16px;
+    font-family: sans-serif;
+    width: max-content;
+    padding: 2rem 3rem;
+    margin: 1rem;
+    width: 50%;
+}
 
 /* items.html classes */
 
 .card{
-    border-radius: 10px;
-    box-shadow: 1px 1px 10px 2px #000;
+    border-radius: 14px;
+    box-shadow: 5px 10px 12px 3px #00000075;
     cursor: pointer;
     display: inline-block;
     position: relative;
     margin: 1.4rem;
+    transition: 1s ease-in-out all;
+}
+
+.card:hover{
+    transform: translate(0px, -15px);
 }
 
 .feedback-cover{
-    background-color: #2b2b2bd9;
+	border-radius: 14px 14px 0 0;
+    background-color: #222233d9;
+    color: #dee9fa;
 	position: absolute;
 	top: 0;
 	width: 100%;
 	height: 174px;	
 	opacity: 0;
+    transition: 1s ease-in-out all;
 }
 
 .feedback-cover:hover{
@@ -101,9 +145,11 @@ button{
     background: transparent;
     border: 1px solid white;
     border-radius: 50%;
+    height: 50px;
     padding: 8px;
     font-size: 18px;
-    color: white;
+    color: #aacbff;
+    border-color: #aacbff;
 }
 
 .feedback-btn>span{
@@ -116,6 +162,7 @@ button{
 }
 
 .card-poster-img{
+	border-radius: 14px;
 	width: 240px;
 	height: 240px;
 	overflow: hidden;
@@ -123,14 +170,72 @@ button{
 
 .card-title{
 	font-family: sans-serif;
-    background-color: #2b2b2bd9;
-    color: white;
+    background-color: #222233d9;
+    color: #dee9fa;
     height: 70px;
     position: absolute;
     bottom: 0;
     width: 100%;
+    border-radius: 0 0 14px 14px;
 }
 
+
+/*Spinner from loading.io*/
+.spinner {
+  display: inline-block;
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+.spinner div {
+  position: absolute;
+  top: 33px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #223;
+  animation-timing-function: cubic-bezier(0, 1, 1, 0);
+}
+.spinner div:nth-child(1) {
+  left: 8px;
+  animation: spinner1 0.6s infinite;
+}
+.spinner div:nth-child(2) {
+  left: 8px;
+  animation: spinner2 0.6s infinite;
+}
+.spinner div:nth-child(3) {
+  left: 32px;
+  animation: spinner2 0.6s infinite;
+}
+.spinner div:nth-child(4) {
+  left: 56px;
+  animation: spinner3 0.6s infinite;
+}
+@keyframes spinner1 {
+  0% {
+    transform: scale(0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes spinner3 {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(0);
+  }
+}
+@keyframes spinner2 {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(24px, 0);
+  }
+}
 
 
 

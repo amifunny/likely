@@ -251,24 +251,27 @@ class KNN(object):
 		user_df = pd.read_csv(user_csv)
 		item_df = pd.read_csv(item_csv)
 
-		pivot_matrix = df.pivot(
+		pivot_matrix = user_df.pivot(
 							    index=user_column,
 							    columns=item_column,
 							    values=value_column
 							).fillna(0)
 
-		self.csr_matrix = csr_matrix( pivot_matrix.values )
-		self.knn_model.fit( csr_matrix )
+		self.user_ids = pivot_matrix.index.values
+		self.csr_mat = csr_matrix( pivot_matrix.values )
+		self.knn_model.fit( self.csr_mat )
 
 	def get_info(self):
 		info = {}
+		info['user_ids'] = self.user_ids
 		info['knn_model'] = self.knn_model
-		info['csr_matrix'] = self.csr_matrix
+		info['csr_matrix'] = self.csr_mat
 		return info
 
 	def set_info(self,info):
+		self.user_ids = info['user_ids']
 		self.knn_model = info['knn_model']
-		self.csr_matrix = info['csr_matrix']
+		self.csr_mat = info['csr_matrix']
 
 	def get_user_similar(self,
 						 user_csv,
@@ -278,16 +281,27 @@ class KNN(object):
 						 num_preds,
 						 prev_watch_ids):
 
+
+		current_user_id = self.user_ids.tolist().index( user_id )
+
 		num_similar_users = 10
-		distance,indexes = knn_model.kneighbors( csr_matrix[user_id] , n_neighbors=num_similar_users )
+		distance,indexes = self.knn_model.kneighbors( self.csr_mat[current_user_id] ,
+													  n_neighbors=num_similar_users )
+
+		similar_user_ids = [ self.user_ids[i] for i in indexes[0] ]			
+
+		print( similar_user_ids )
 
 		user_df = pd.read_csv(user_csv)
 
-		user_df = (user_df[[indexes],:]).sort_values(
+		user_df = user_df[ user_df['userId'].isin( similar_user_ids ) ]
+		user_df = user_df.sort_values(
 					[value_column], ascending=False
 				  )[ user_df[value_column]>2.5 ][~user_df[item_column].isin(prev_watch_ids)]
 
-		return user_df.index.values[:num_preds]
+		movie_ids = user_df['movieId'].values[:num_preds*2] 
+		np.random.shuffle(movie_ids)
+		return movie_ids[:num_preds]
 
 
 

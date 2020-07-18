@@ -65,14 +65,25 @@
 		
 	</div>
 
-
-	<div class="method-message">
-		{{message}}
-	</div>
-
-
-	<div id="main_content" class="main-content">
+	<div class="main-body">
 		
+		<div class="flex-center">
+			<div class="method-message">
+				{% if username is none %}
+					Create User to get recommendations
+				{% else %}
+					{{message}}
+				{% endif %}	
+			</div>	
+		</div>
+
+
+		<div id="main_content" class="main-content">
+			<div class="spinner">
+				<div></div><div></div><div></div><div></div>
+			</div>
+		</div>
+
 	</div>
 
 	<div class="maker-tag">
@@ -83,23 +94,23 @@
 
 <script type="text/javascript">
 	
-	$.ajax({
-		cache:false,
-		method:"POST",
-		dataType:'html',
-		url:'/load_content',
-		error:function(error,xhr,status) {
-				return false
-		}
-	}).done(function(data){
+	// $.ajax({
+	// 	cache:false,
+	// 	method:"POST",
+	// 	dataType:'html',
+	// 	url:'/load_content',
+	// 	error:function(error,xhr,status) {
+	// 			return false
+	// 	}
+	// }).done(function(data){
 
-		if(data!=null){
+	// 	if(data!=null){
 
-			$('#main_content').append( $(data) );
+	// 		$('#main_content').append( $(data) );
 
-		}
+	// 	}
 
-	});
+	// });
 
 
 </script>

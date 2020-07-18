@@ -91,9 +91,11 @@ def initialize_method(method):
 				   'movieId','rating')
 		info = recommender_global.get_info()
 	elif method==3:
+		print("SAHI aaya")
 		recommender_global = KNN()		 	
-		info = recommender_global.get_info()
-	save_info(info)
+		# info = recommender_global.get_info()
+	
+	# save_info(info)
 
 @app.route("/")
 def home():
@@ -109,7 +111,9 @@ def home():
 def get_items( indices ):
 
 	df = pd.read_csv(root+'Movie_dataset.csv')
-	row_list = df[ df['movieId'].isin(indices) ].to_dict('records')
+	df = df[ df['movieId'].isin(indices) ]
+	df_unique = df.drop_duplicates(subset = ["movieId"])
+	row_list = df_unique.to_dict('records')
 
 	return row_list
 
@@ -122,12 +126,18 @@ def get_user_watch_ids():
 	watch_array = np.array( watch_obj[ session.get('username') ] )
 
 	if watch_array.size==0:
-		return watch_array
+		return watch_array,[]
 
-	all_user_watch_ids = watch_array[:,1]
+	moviehash = {}
+	for movie_tup in watch_array:
+		moviehash[ movie_tup[1] ] = movie_tup
+
+	unique_watch_array = np.array( list( (moviehash.values()) ) )
+
+	all_user_watch_ids = unique_watch_array[:,1]
 	all_user_watch_ids = all_user_watch_ids.astype(np.int) 
 	
-	pos_user_watch_ids = watch_array[watch_array[:,2]=="5.0"]
+	pos_user_watch_ids = unique_watch_array[unique_watch_array[:,2]=="5.0"]
 	pos_user_watch_ids = pos_user_watch_ids[:,1]
 	pos_user_watch_ids = pos_user_watch_ids.astype(np.int) 
 
@@ -159,7 +169,7 @@ def use_recommendation(num_preds):
 
 	if len(user_watch_ids)==0:
 		movie_df = pd.read_csv('static/dataset/Movie_dataset.csv')
-		indices = movie_df.sample(num_preds).index
+		indices = movie_df.sample(num_preds)['movieId'].values
 		return indices
 
 	make_temp_csv()
@@ -197,8 +207,16 @@ def use_recommendation(num_preds):
 							num_preds
 							)
 	elif method==3:
+		print("SAHI aaya")
+		recommender_global.fit_model(
+				'static/temp/Current_User_dataset.csv',
+				'userId',
+				'static/temp/Current_User_dataset.csv',
+				'movieId',
+				'rating'
+			)
 		predicted_indices = recommender_global.get_user_similar(
-			root+'Movie_dataset.csv'
+			'static/temp/Current_User_dataset.csv',
 			'movieId',
 			'rating',
 			 user_id,

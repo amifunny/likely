@@ -1,32 +1,36 @@
-# Library to help create recommendation agents.
-
 import numpy as np
 from scipy.sparse.linalg import svds
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse import csr_matrix
 import ast
-# Methods Implemented are :- 
+
+# Classes Implemented are :- 
 #  1) Multi Armed Bandit
-
-
+#  2) SVD
+#  3) KNN
 
 class MultiArmedBandit():
 
 	def __init__(self,item_csv,key_column):
 		
+		# item_csv : contains info like genre or keywords
+		# about items 
+		# key_column : Column with genre
+
 		item_df = pd.read_csv(item_csv)
 		keywords_list = item_df[key_column].apply(lambda x: ast.literal_eval(x))
 		keywords_list = keywords_list.explode().unique() 
 
 		self.keywords = sorted(keywords_list)
 
+		# `num_arms` are categories that our bandit can choose from
 		self.num_arms = len(self.keywords)
 
-
+		# `a` and `b` are parameters of beta distribution,
+		# and not some naive naming
 		self.a = np.ones( (1,self.num_arms) )
 		self.b = np.ones( (1,self.num_arms) )
-
 
 
 	def get_info(self):
@@ -61,24 +65,38 @@ class MultiArmedBandit():
 				order='DESC'):
 
 
+		# Store keyword sampled
 		predictions = []
 
 		for i in range(num_preds):
+			# Sample q-values
 			sampled_q = np.random.beta(self.a[0,:],self.b[0,:])
+			# Get index of highest q-value predicted
 			key_choice = np.argmax( sampled_q )
+			# Get string ofthat keyword
 			categ_choice = self.keywords[ key_choice ]
 			predictions.append( categ_choice )
 
 		set_pred = set(predictions)
 
 		# Get Sample on from dataframe on
-		# based on weight colums and value
+		# based on weight columns and value
 		item_df = pd.read_csv(item_csv)
+		# convert "stringy" list of genre into proper list
 		item_df[keyword_column] = item_df[keyword_column].apply(lambda x: ast.literal_eval(x))
-		item_df = item_df.assign(inter_index=[len(set(each_genre) & set_pred) for each_genre in item_df.genre])
+		
+		# It assign a counter for number of predicted keywords
+		# in any row.
+		# For example, if predicted keys are ["Mystery","Horror"],
+		# 'inter_index' give high values to rows tih both the genre in it
+		item_df = item_df.assign(
+					inter_index=[len(set(each_genre) & set_pred) for each_genre in item_df.genre]
+				)
 
 		picked_ids = prev_watch_ids
 		pred_ids = []
+		# To add element of randomness, 
+		# we shuffle top given number of rows
 		shuffle_limit = 50
 		for categ in predictions:
 			# Search for rows with 'genre' for given `categ`
@@ -91,6 +109,8 @@ class MultiArmedBandit():
 			selected_rows = selected_rows[:shuffle_limit].sample(frac=1)
 			
 			if len(selected_rows.index)!=0:
+				# Choose ony first that bubble up 
+				# after shuffling
 				selected_row = selected_rows.iloc[0]
 				item_id = selected_row['movieId']
 				pred_ids.append(item_id)
@@ -148,7 +168,7 @@ class MultiArmedBandit():
 				self.a[0,negative_category] += negative_reward
 				self.b[0,negative_category] += 1 - negative_reward
 
-		return self.get_info()
+		return
 			
 
 class SVD():
@@ -161,6 +181,7 @@ class SVD():
 				value_column):
 
 		rating_df = pd.read_csv(rating_csv)
+		# Create a pivot matrix with rating as values
 		pivot_matrix = rating_df.pivot(index=user_column, columns=item_column, values=value_column).fillna(0)
 
 		self.pivot_matrix = pivot_matrix
@@ -168,8 +189,10 @@ class SVD():
 		all_values = pivot_matrix.values
 		user_avg_value = np.mean( all_values , axis=-1 )
 
+		# Subtract the average rating of user from each rating
 		normalised_values = all_values - user_avg_value.reshape(-1,1)
 
+		# Standard Singular Vector Decomposition (SVD)
 		self.User_Vector,self.Weight,self.Item_Vector = svds( normalised_values , k = latent_size )
 
 	def get_info(self):
@@ -181,15 +204,16 @@ class SVD():
 		info['Pivot_matrix'] = self.pivot_matrix
 		return info
 
-	def get_fit_knn(self,matrix):
+	def get_fit_knn(self,matrix,num_neighbors=20):
 
 		self.knn_model = NearestNeighbors( metric='cosine' , algorithm='brute',
-									  n_neighbors=20, n_jobs=-1)
-		print(matrix.shape)
+									  n_neighbors=num_neighbors, n_jobs=-1)
 		self.knn_model.fit( matrix )
 
 	def item_based(self,prev_watch_ids,num_preds):
 
+		# When dealing with pivot matrix,
+		# we need indexes of given ids
 		all_movie_ids = self.pivot_matrix.columns
 		item_idx = []
 		for i,movie_id in enumerate(all_movie_ids):
@@ -197,38 +221,46 @@ class SVD():
 				item_idx.append(i)
 
 		items = (self.Item_Vector.transpose())[item_idx]
-		print( items.shape )
 
 		predictions = []
 
-		if len(prev_watch_ids)*5<20:
-			num_of_neighbors = 20
+		# If num of movies watched are few , we use 
+		# getch more neighbor and not otherwise
+		if len(prev_watch_ids)*(num_preds/4)<num_preds:
+			num_of_neighbors = num_preds
 		else:
-			num_of_neighbors = 5
+			num_of_neighbors = num_preds/4
 
+		# Get indices of similar
 		weights,indices = self.knn_model.kneighbors( items , n_neighbors=num_of_neighbors )
+		# Convert indices into ids
 		pred_ids = ( self.pivot_matrix.transpose() ).index[ indices.flatten() ]
+		# exclude watched ids
 		non_watched_idx = list(set(pred_ids) - set(prev_watch_ids))
-		print(non_watched_idx)
+
+		# Shuffle to add element of randomness
 		np.random.shuffle(non_watched_idx)
 		predictions.extend( non_watched_idx[:num_preds] )
 
 		return predictions	
 
-	# TODO : Duplicate enrty in "watch json" causing problem.
-	# Also limit the 'prev_watch_ids'
 	def user_item_based(self,prev_watch_ids,user_id,num_preds):
 
 		pivot_indices = self.pivot_matrix.index.values.tolist()
 		user_idx = pivot_indices.index( user_id )
 
+		# Using vectors got from SVd operation,
+		# we can use simple dot product to get predicted ratings
+		# by a user for items
 		predicted_rating = np.dot( 
 						   np.dot( np.reshape( self.User_Vector[user_idx] , (1,-1) ) , np.diag( self.Weight ) )
 						   , self.Item_Vector )
 		predicted_df = pd.DataFrame( predicted_rating.transpose() , 
 						index = self.pivot_matrix.columns.values.tolist() , columns=['rating'] )
 
+		# Exclude watched id rows
 		excluded_df = predicted_df[ ~predicted_df.index.isin(prev_watch_ids)]
+		# Note : 'rating' here is predicted and not determined one
 		predicted_ids = excluded_df.sort_values('rating', ascending = False).index.values[:num_preds]
 
 		return predicted_ids
@@ -236,10 +268,10 @@ class SVD():
 
 class KNN(object):
 
-	def __init__(self):
+	def __init__(self,num_neighbors=20):
 
 		self.knn_model = NearestNeighbors( metric='cosine' , algorithm='brute',
-									  n_neighbors=20, n_jobs=-1)
+									  n_neighbors=num_neighbors, n_jobs=-1)
 	
 	def fit_model(self,
 				  user_csv,
@@ -257,7 +289,10 @@ class KNN(object):
 							    values=value_column
 							).fillna(0)
 
+		# Get userIds for index to id conversion
 		self.user_ids = pivot_matrix.index.values
+		# Convert Sparse matrix consisting mostly zeros
+		# into CSR matrix
 		self.csr_mat = csr_matrix( pivot_matrix.values )
 		self.knn_model.fit( self.csr_mat )
 
@@ -279,27 +314,31 @@ class KNN(object):
 						 value_column,
 						 user_id,
 						 num_preds,
-						 prev_watch_ids):
+						 prev_watch_ids,
+						 num_similar_users = 10):
 
-
-		current_user_id = self.user_ids.tolist().index( user_id )
-
-		num_similar_users = 10
-		distance,indexes = self.knn_model.kneighbors( self.csr_mat[current_user_id] ,
+		# Convert Current user_id into corresponding index
+		current_user_idx = self.user_ids.tolist().index( user_id )
+		
+		# Get similar users' index
+		distance,indexes = self.knn_model.kneighbors( self.csr_mat[current_user_idx] ,
 													  n_neighbors=num_similar_users )
 
+		# Convert Indices into Ids for users
 		similar_user_ids = [ self.user_ids[i] for i in indexes[0] ]			
-
-		print( similar_user_ids )
 
 		user_df = pd.read_csv(user_csv)
 
+		# Read user rated movies
 		user_df = user_df[ user_df['userId'].isin( similar_user_ids ) ]
+		# And return Top rated movies by users
 		user_df = user_df.sort_values(
 					[value_column], ascending=False
 				  )[ user_df[value_column]>2.5 ][~user_df[item_column].isin(prev_watch_ids)]
 
+		# Skim out Ids double the amount we require
 		movie_ids = user_df['movieId'].values[:num_preds*2] 
+		# Shuffle to add randomness
 		np.random.shuffle(movie_ids)
 		return movie_ids[:num_preds]
 

@@ -94,23 +94,23 @@
 
 <script type="text/javascript">
 	
-	// $.ajax({
-	// 	cache:false,
-	// 	method:"POST",
-	// 	dataType:'html',
-	// 	url:'/load_content',
-	// 	error:function(error,xhr,status) {
-	// 			return false
-	// 	}
-	// }).done(function(data){
+	$.ajax({
+		cache:false,
+		method:"POST",
+		dataType:'html',
+		url:'/load_content',
+		error:function(error,xhr,status) {
+				return false
+		}
+	}).done(function(data){
 
-	// 	if(data!=null){
+		if(data!=null){
 
-	// 		$('#main_content').append( $(data) );
+			$('#main_content').append( $(data) );
 
-	// 	}
+		}
 
-	// });
+	});
 
 
 </script>

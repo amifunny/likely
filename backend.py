@@ -324,6 +324,9 @@ def use_recommendation(num_preds):
 @app.route("/load_content",methods=["POST","GET"])
 def load_content():
 
+	if session.get('username') is None:
+		return ""
+
 	# Get recommended indices
 	indices = use_recommendation(NUM_PREDS)
 

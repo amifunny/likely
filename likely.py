@@ -210,14 +210,14 @@ class SVD():
 									  n_neighbors=num_neighbors, n_jobs=-1)
 		self.knn_model.fit( matrix )
 
-	def item_based(self,prev_watch_ids,num_preds):
+	def item_based(self,all_prev_watch_ids,pos_prev_watch_ids,num_preds):
 
 		# When dealing with pivot matrix,
 		# we need indexes of given ids
 		all_movie_ids = self.pivot_matrix.columns
 		item_idx = []
 		for i,movie_id in enumerate(all_movie_ids):
-			if movie_id in prev_watch_ids:
+			if movie_id in pos_prev_watch_ids:
 				item_idx.append(i)
 
 		items = (self.Item_Vector.transpose())[item_idx]
@@ -225,21 +225,26 @@ class SVD():
 		predictions = []
 
 		# If num of movies watched are few , we use 
-		# getch more neighbor and not otherwise
-		if len(prev_watch_ids)*(num_preds/4)<num_preds:
+		# fetch more neighbor and not otherwise
+		if len(pos_prev_watch_ids)*(num_preds/2)<num_preds:
 			num_of_neighbors = num_preds
 		else:
-			num_of_neighbors = num_preds/4
+			num_of_neighbors = int(num_preds/2)
+
+		print(num_of_neighbors)
 
 		# Get indices of similar
 		weights,indices = self.knn_model.kneighbors( items , n_neighbors=num_of_neighbors )
+		print(indices)
 		# Convert indices into ids
 		pred_ids = ( self.pivot_matrix.transpose() ).index[ indices.flatten() ]
 		# exclude watched ids
-		non_watched_idx = list(set(pred_ids) - set(prev_watch_ids))
+		non_watched_idx = list(set(pred_ids) - set(all_prev_watch_ids))
 
 		# Shuffle to add element of randomness
+		print(non_watched_idx)
 		np.random.shuffle(non_watched_idx)
+		print(non_watched_idx)
 		predictions.extend( non_watched_idx[:num_preds] )
 
 		return predictions	

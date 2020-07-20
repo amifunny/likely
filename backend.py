@@ -53,7 +53,7 @@ info_filename = None
 recommender_global = None
 
 # root path of primary datasets
-root = 'static/dataset'
+root = 'static/dataset/'
 
 # Determines num of recommended items to display
 NUM_PREDS = 20
@@ -152,6 +152,10 @@ def get_items( ids ):
 	# with it.
 	# Drop any rows with duplicate values of 'movieId'
 	df_unique = df.drop_duplicates(subset = ["movieId"])
+
+	# Make genre as "|" joined string
+	df_unique['genre'] = df_unique['genre'].apply(lambda x: "|".join( ast.literal_eval(x) ) )
+
 	# Convert it into list of dictionaries
 	row_list = df_unique.to_dict('records')
 
@@ -205,6 +209,17 @@ def make_temp_csv():
 
 	# Get all watched movies and rating in list of lists format
 	watch_array = np.array( watch_obj[ session.get('username') ] )
+
+	# Hash table to store unique movie values
+	moviehash = {}
+	# This is done to avoid duplicate rating for same movie,
+	# this has to employed as we don't perform any checks at time of feedback
+	for movie_tup in watch_array:
+		# at position 1 is movieId
+		moviehash[ movie_tup[1] ] = movie_tup
+
+	# Get back unique value as list of lists
+	watch_array = np.array( list( (moviehash.values()) ) )
 
 	user_df = pd.read_csv(root+'User_dataset.csv')
 	# Convert into dataframe
@@ -281,6 +296,7 @@ def use_recommendation(num_preds):
 
 		recommender_global.get_fit_knn( recommender_global.Item_Vector.transpose() )
 		predicted_indices = recommender_global.item_based(
+							user_watch_ids,
 							pos_user_watch_ids,
 							num_preds
 							)
@@ -408,7 +424,7 @@ def get_method_message(method):
 			   "by current user(you).")
 	elif method==3:
 		msg = ("Based on your movie pattern, finds similar users "
-			   "and movie rated good by them are Recommended.")
+			   "and movie rated good by them, are Recommended.")
 
 
 	return msg

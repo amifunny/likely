@@ -226,7 +226,7 @@ def make_temp_csv():
 	current_df = pd.DataFrame( watch_array , columns=['userId','movieId','rating','timestamp'] )
 	# Append to already stored ratings datset
 	new_df = user_df.append( current_df , ignore_index=True )
-	new_df.to_csv('static/temp/Current_User_dataset.csv',index=False)
+	new_df.to_csv('static/Current_User_dataset.csv',index=False)
 
 	return
 
@@ -273,7 +273,7 @@ def use_recommendation(num_preds):
 	elif method==1:
 		latent_size = 50
 		recommender_global = SVD(latent_size,
-								'static/temp/Current_User_dataset.csv',
+								'static/Current_User_dataset.csv',
 								'userId',
 		   						'movieId',
 		   						'rating')
@@ -289,7 +289,7 @@ def use_recommendation(num_preds):
 			return indices
 
 		recommender_global = SVD(50,
-								'static/temp/Current_User_dataset.csv',
+								'static/Current_User_dataset.csv',
 								'userId',
 		   						'movieId',
 		   						'rating')
@@ -303,14 +303,14 @@ def use_recommendation(num_preds):
 	elif method==3:
 
 		recommender_global.fit_model(
-				'static/temp/Current_User_dataset.csv',
+				'static/Current_User_dataset.csv',
 				'userId',
-				'static/temp/Current_User_dataset.csv',
+				'static/Current_User_dataset.csv',
 				'movieId',
 				'rating'
 			)
 		predicted_indices = recommender_global.get_user_similar(
-			'static/temp/Current_User_dataset.csv',
+			'static/Current_User_dataset.csv',
 			'movieId',
 			'rating',
 			 user_id,

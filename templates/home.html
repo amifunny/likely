@@ -29,8 +29,9 @@
 			<form class="user-form" method="POST" action="/start_session">
 
 				<div class="current-method">
-					<select name="recommend_method" class="select-current-method">
-						<option>Select a Method ...</option>
+					<select required name="recommend_method" class="select-current-method">
+						<option
+						value="">Select a Method ...</option>
 						<option 
 						{% if (method==0) %}
 							selected="" 
@@ -55,7 +56,8 @@
 				</div>
 
 				<div>
-					<input class="username-input" placeholder="Enter your Name .." type="" name="username">
+					<input required class="username-input" 
+					placeholder="Enter your Name .." type="" name="username">
 					<button type="submit">Create New User</button>
 				</div>
 

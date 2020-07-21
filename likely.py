@@ -231,20 +231,16 @@ class SVD():
 		else:
 			num_of_neighbors = int(num_preds/2)
 
-		print(num_of_neighbors)
 
 		# Get indices of similar
 		weights,indices = self.knn_model.kneighbors( items , n_neighbors=num_of_neighbors )
-		print(indices)
 		# Convert indices into ids
 		pred_ids = ( self.pivot_matrix.transpose() ).index[ indices.flatten() ]
 		# exclude watched ids
 		non_watched_idx = list(set(pred_ids) - set(all_prev_watch_ids))
 
 		# Shuffle to add element of randomness
-		print(non_watched_idx)
 		np.random.shuffle(non_watched_idx)
-		print(non_watched_idx)
 		predictions.extend( non_watched_idx[:num_preds] )
 
 		return predictions	
